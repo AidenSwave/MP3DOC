@@ -14,12 +14,41 @@ LOADER = ROOT / "OLD/JS.txt"
 FALLBACK_CSS = ROOT / "OLD/live.css"
 FALLBACK_TEXT = ROOT / "OLD/live.txt"
 
+SCRIPT_FILES = [
+    "JS/config.js",
+    "JS/tools.js",
+    "JS/static-effect.js",
+    "JS/assets.js",
+    "JS/screenplay-parser.js",
+    "JS/screenplay-validation.js",
+    "JS/audio.js",
+    "JS/visuals.js",
+    "JS/dialogue.js",
+    "JS/story-flow.js",
+    "JS/hotspots.js",
+    "JS/startup.js",
+]
 
-def runtime_files(folder: str, extension: str) -> list[Path]:
-    return sorted(
-        (ROOT / folder).rglob(f"*.{extension}"),
-        key=lambda path: path.relative_to(ROOT).as_posix().lower(),
-    )
+STYLE_FILES = [
+    "CSS/base.css",
+    "CSS/shell.css",
+    "CSS/status.css",
+    "CSS/stage.css",
+    "CSS/dialogue.css",
+    "CSS/options.css",
+    "CSS/static-effect.css",
+    "CSS/hotspots.css",
+    "CSS/orientation.css",
+]
+
+
+def runtime_files(relative_paths: list[str]) -> list[Path]:
+    paths = [ROOT / relative_path for relative_path in relative_paths]
+    missing = [path for path in paths if not path.is_file()]
+    if missing:
+        names = ", ".join(path.relative_to(ROOT).as_posix() for path in missing)
+        raise RuntimeError(f"Missing runtime files: {names}")
+    return paths
 
 
 def relative_paths(paths: list[Path]) -> list[str]:
@@ -40,10 +69,8 @@ def replace_embedded(html: str, element: str, element_id: str, content: str) -> 
 
 
 def synchronize() -> tuple[list[str], list[str]]:
-    scripts = runtime_files("JS", "js")
-    styles = runtime_files("CSS", "css")
-    if not scripts or not styles:
-        raise RuntimeError("The /JS/ and /CSS/ trees must both contain files")
+    scripts = runtime_files(SCRIPT_FILES)
+    styles = runtime_files(STYLE_FILES)
 
     css_bundle = "\n\n".join(path.read_text().rstrip() for path in styles) + "\n"
     FALLBACK_CSS.write_text(css_bundle)
@@ -77,8 +104,8 @@ def main() -> None:
     )
     arguments = parser.parse_args()
     if arguments.preview_only:
-        scripts = relative_paths(runtime_files("JS", "js"))
-        styles = relative_paths(runtime_files("CSS", "css"))
+        scripts = relative_paths(runtime_files(SCRIPT_FILES))
+        styles = relative_paths(runtime_files(STYLE_FILES))
     else:
         scripts, styles = synchronize()
     if arguments.print_local_config:
